@@ -5,13 +5,10 @@ from src.face.face_landmarks import FaceLandmarks
 from src.eyes.eye_state import get_eye_landmarks
 from src.eyes.ear import calculate_ear
 
-
 MODEL_PATH = "models/face_landmarker.task"
 
 cap = cv2.VideoCapture(0)
-
 detector = FaceLandmarks(MODEL_PATH)
-
 start_time = time.time()
 
 while True:
@@ -30,7 +27,6 @@ while True:
 
         left_ear = calculate_ear(left_eye)
         right_ear = calculate_ear(right_eye)
-
         average_ear = (left_ear + right_ear) / 2
 
         cv2.putText(
@@ -62,6 +58,34 @@ while True:
             (0, 255, 0),
             2
         )
+
+        h, w, _ = frame.shape
+
+        # Draw left eye landmarks
+        for landmark in left_eye:
+            x = int(landmark.x * w)
+            y = int(landmark.y * h)
+
+            cv2.circle(
+                frame,
+                (x, y),
+                4,
+                (255, 0, 0),
+                -1
+            )
+
+        # Draw right eye landmarks
+        for landmark in right_eye:
+            x = int(landmark.x * w)
+            y = int(landmark.y * h)
+
+            cv2.circle(
+                frame,
+                (x, y),
+                4,
+                (255, 0, 0),
+                -1
+            )
 
     else:
         cv2.putText(
