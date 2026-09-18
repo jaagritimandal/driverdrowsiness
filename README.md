@@ -274,7 +274,7 @@ Sustained high MAR → Potential yawn
 
 **Faculty In-Charge:** Dr. Rama Prabha K. P.
 
-**Institution:** Vellore Institute of Technology — Chennai
+**Institution:** Vellore Institute of Technology, Chennai
 
 ---
 
