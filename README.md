@@ -3,7 +3,7 @@
 
 ### Context-Aware Multimodal Driver Risk Assessment
 
-> An AI-based driver monitoring system that analyzes observable facial and behavioral cues to identify potential driver fatigue and distraction in real time.
+> An AI-based driver monitoring system that analyzes observable facial and behavioral cues to identify potential driver fatigue and distraction in real time..
 
 ---
 
