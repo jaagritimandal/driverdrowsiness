@@ -1,0 +1,3 @@
+# Add these to the repo's existing requirements.txt (mediapipe/opencv-python/numpy
+# should already be there from Person 1's setup) -- only new deps for Person 2:
+ultralytics>=8.0.0
