@@ -1,4 +1,0 @@
-opencv-python
-mediapipe
-numpy
-ultralytics
