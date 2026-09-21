@@ -2,6 +2,14 @@ import time
 
 
 class GazeEstimator:
+    """
+    Tracks whether the driver is looking away based on head yaw/pitch.
+
+    The away timer is shared across normal pose detection and temporary
+    face loss, so a continuous turn away from the road is not reset merely
+    because the face temporarily becomes undetectable.
+    """
+
     def __init__(
         self,
         yaw_threshold_deg: float = 25.0,
@@ -10,7 +18,9 @@ class GazeEstimator:
         forward_pitch_threshold_deg: float = 12.0,
         forward_confirm_seconds: float = 0.5,
         sustained_seconds: float = 4.0,
+        away_grace_seconds: float = 0.4,
         face_lost_seconds: float = 1.5,
+        face_lost_confirm_seconds: float = 0.15,
     ):
         self.yaw_threshold_deg = yaw_threshold_deg
         self.pitch_threshold_deg = pitch_threshold_deg
@@ -20,10 +30,13 @@ class GazeEstimator:
 
         self.forward_confirm_seconds = forward_confirm_seconds
         self.sustained_seconds = sustained_seconds
+        self.away_grace_seconds = away_grace_seconds
         self.face_lost_seconds = face_lost_seconds
+        self.face_lost_confirm_seconds = face_lost_confirm_seconds
 
         self._away_since = None
         self._forward_since = None
+        self._not_away_since = None
         self._face_lost_since = None
 
     def update(self, pitch: float, yaw: float):
@@ -41,41 +54,32 @@ class GazeEstimator:
             and abs(pitch) < self.forward_pitch_threshold_deg
         )
 
-        # ---------------------------------
-        # Currently looking away
-        # ---------------------------------
+        # Currently in an away episode.
         if self._away_since is not None:
 
-            # Only start the "forward confirmation"
-            # timer when the pose actually looks forward.
+            # Require continuous forward-facing time before ending
+            # the away episode.
             if confirmed_forward:
                 if self._forward_since is None:
                     self._forward_since = now
 
                 forward_duration = now - self._forward_since
 
-                # Reset only after being forward
-                # continuously for the required time.
                 if forward_duration >= self.forward_confirm_seconds:
                     self._away_since = None
                     self._forward_since = None
+                    self._not_away_since = None
             else:
-                # One noisy frame that is not forward
-                # cancels the forward confirmation.
                 self._forward_since = None
+                self._not_away_since = None
 
-        # ---------------------------------
-        # Currently looking forward
-        # ---------------------------------
+        # Currently not in an away episode.
         else:
-
             if start_away:
                 self._away_since = now
                 self._forward_since = None
+                self._not_away_since = None
 
-        # ---------------------------------
-        # Calculate current state
-        # ---------------------------------
         if self._away_since is not None:
             away_duration = now - self._away_since
             looking_away = True
@@ -100,15 +104,40 @@ class GazeEstimator:
         if self._face_lost_since is None:
             self._face_lost_since = now
 
-        lost_duration = now - self._face_lost_since
-        face_lost_sustained = lost_duration >= self.face_lost_seconds
+        face_lost_duration = now - self._face_lost_since
+
+        face_lost_sustained = (
+            face_lost_duration >= self.face_lost_seconds
+        )
+
+        # A very short face loss should not immediately create
+        # an away event.
+        confirmed_lost = (
+            face_lost_duration >= self.face_lost_confirm_seconds
+        )
+
+        if confirmed_lost:
+            if self._away_since is None:
+                self._away_since = now
+
+            self._forward_since = None
+            self._not_away_since = None
+
+        if self._away_since is not None:
+            away_duration = now - self._away_since
+            looking_away = True
+        else:
+            away_duration = 0.0
+            looking_away = False
+
+        sustained_away = away_duration >= self.sustained_seconds
 
         return {
-            "looking_away": True,
-            "sustained_away": False,
-            "away_duration_sec": 0.0,
+            "looking_away": looking_away,
+            "sustained_away": sustained_away,
+            "away_duration_sec": round(away_duration, 2),
             "face_lost_sustained": face_lost_sustained,
-            "face_lost_duration_sec": round(lost_duration, 2),
+            "face_lost_duration_sec": round(face_lost_duration, 2),
             "pitch": None,
             "yaw": None,
         }
